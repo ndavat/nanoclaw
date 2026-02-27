@@ -6,13 +6,29 @@ import { readEnvFile } from './env.js';
 // Read config values from .env (falls back to process.env).
 // Secrets are NOT read here — they stay on disk and are loaded only
 // where needed (container-runner.ts) to avoid leaking to child processes.
-const envConfig = readEnvFile(['ASSISTANT_NAME', 'ASSISTANT_HAS_OWN_NUMBER']);
+const envConfig = readEnvFile([
+  'ASSISTANT_NAME',
+  'ASSISTANT_HAS_OWN_NUMBER',
+  'TELEGRAM_BOT_TOKEN',
+  'NVIDIA_API_KEY',
+  'LLM_MODEL',
+  'PORT',
+]);
 
 export const ASSISTANT_NAME =
   process.env.ASSISTANT_NAME || envConfig.ASSISTANT_NAME || 'Andy';
 export const ASSISTANT_HAS_OWN_NUMBER =
   (process.env.ASSISTANT_HAS_OWN_NUMBER ||
     envConfig.ASSISTANT_HAS_OWN_NUMBER) === 'true';
+
+export const TELEGRAM_BOT_TOKEN =
+  process.env.TELEGRAM_BOT_TOKEN || envConfig.TELEGRAM_BOT_TOKEN;
+export const NVIDIA_API_KEY =
+  process.env.NVIDIA_API_KEY || envConfig.NVIDIA_API_KEY;
+export const LLM_MODEL =
+  process.env.LLM_MODEL || envConfig.LLM_MODEL || 'moonshotai/kimi-k2.5';
+export const PORT = parseInt(process.env.PORT || envConfig.PORT || '3000', 10);
+export const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 export const POLL_INTERVAL = 2000;
 export const SCHEDULER_POLL_INTERVAL = 60000;
 

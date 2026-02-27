@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: nanoclaw-telegram
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        value: moonshotai/kimi-k2.5
+      - key: ASSISTANT_NAME
+        value: Andy
+      - key: ASISTANT_HAS_OWN_NUMBER
+        value: "true"
