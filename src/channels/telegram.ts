@@ -50,28 +50,24 @@ export class TelegramChannel implements Channel {
             );
 
             const groups = this.opts.registeredGroups();
-            if (groups[chatJid]) {
-                const sender = ctx.from?.id ? `tg:${ctx.from.id}` : chatJid;
-                const senderName = ctx.from?.first_name || 'User';
-                const content = ctx.message.text || '';
+            const sender = ctx.from?.id ? `tg:${ctx.from.id}` : chatJid;
+            const senderName = ctx.from?.first_name || 'User';
+            const content = ctx.message.text || '';
 
-                // Simplistic bot message detection: message from the bot itself is usually not received via this handler
-                // but if we use a shared number pattern, we check prefix.
-                // In Telegram, bots don't receive their own messages unless they are admin and 
-                // specialized settings are on, but we follow the existing pattern.
-                const isBotMessage = content.startsWith(`${ASSISTANT_NAME}:`);
+            logger.info({ chatJid, senderName, isRegistered: !!groups[chatJid] }, 'Telegram message received');
 
-                this.opts.onMessage(chatJid, {
-                    id: ctx.message.message_id.toString(),
-                    chat_jid: chatJid,
-                    sender,
-                    sender_name: senderName,
-                    content,
-                    timestamp,
-                    is_from_me: false, // Messages received by the bot are not from the bot
-                    is_bot_message: isBotMessage,
-                });
-            }
+            const isBotMessage = content.startsWith(`${ASSISTANT_NAME}:`);
+
+            this.opts.onMessage(chatJid, {
+                id: ctx.message.message_id.toString(),
+                chat_jid: chatJid,
+                sender,
+                sender_name: senderName,
+                content,
+                timestamp,
+                is_from_me: false,
+                is_bot_message: isBotMessage,
+            });
         });
     }
 

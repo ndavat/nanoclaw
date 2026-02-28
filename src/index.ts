@@ -313,8 +313,23 @@ async function startMessageLoop(): Promise<void> {
         }
 
         for (const [chatJid, groupMessages] of messagesByGroup) {
-          const group = registeredGroups[chatJid];
-          if (!group) continue;
+          let group = registeredGroups[chatJid];
+          if (!group) {
+            // Auto-register private Telegram chats on demand
+            if (chatJid.startsWith('tg:') && !chatJid.includes('@g.us')) {
+              logger.info({ chatJid }, 'Auto-registering private chat');
+              registerGroup(chatJid, {
+                name: groupMessages[0].sender_name,
+                folder: 'main', // Default to main memory
+                trigger: '',
+                added_at: new Date().toISOString(),
+                requiresTrigger: false,
+              });
+              group = registeredGroups[chatJid];
+            } else {
+              continue;
+            }
+          }
 
           const channel = findChannel(channels, chatJid);
           if (!channel) {
