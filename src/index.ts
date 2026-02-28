@@ -181,7 +181,12 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
     }, IDLE_TIMEOUT);
   };
 
+  // Continuous typing indicator loop while the agent is active
+  const typingInterval = setInterval(() => {
+    channel.setTyping?.(chatJid, true)?.catch(() => { });
+  }, 4000); // Telegram typing status lasts ~5s
   await channel.setTyping?.(chatJid, true);
+
   let hadError = false;
   let outputSentToUser = false;
 
@@ -195,7 +200,7 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
       // Periodically send chunks if we have a significant amount of new text
       // but only if it ends in a newline or sentence boundary to avoid breaking markdown
       const newContent = streamedText.slice(lastSentLength);
-      if (newContent.length > 500 && (newContent.includes('\n') || newContent.includes('. '))) {
+      if (newContent.length > 150 && (newContent.includes('\n') || newContent.includes('. '))) {
         const textToSend = formatOutbound(streamedText.slice(lastSentLength));
         if (textToSend) {
           await channel.sendMessage(chatJid, textToSend);
@@ -211,6 +216,9 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
       hadError = true;
     }
   });
+
+  clearInterval(typingInterval);
+  await channel.setTyping?.(chatJid, false);
 
   // Send any remaining text
   const remainingText = formatOutbound(streamedText.slice(lastSentLength));

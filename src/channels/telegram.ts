@@ -106,23 +106,31 @@ export class TelegramChannel implements Channel {
     async sendMessage(jid: string, text: string): Promise<void> {
         const chatId = parseInt(jid.replace('tg:', ''), 10);
 
-        // Telegram MarkdownV2 requires escaping special characters outside of code blocks/links
-        const escapeMarkdown = (str: string) => {
-            return str.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+        // Convert basic markdown to HTML for stable Telegram formatting
+        const mdToHtml = (str: string) => {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\*\*\*(.*?)\*\*\*/g, '<b><i>$1</i></b>')
+                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                .replace(/\*(.*?)\*/g, '<b>$1</b>')
+                .replace(/__(.*?)__/g, '<i>$1</i>')
+                .replace(/_(.*?)_/g, '<i>$1</i>')
+                .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+                .replace(/`(.*?)`/g, '<code>$1</code>');
         };
 
+        const htmlText = mdToHtml(text);
+
         try {
-            // If the text contains markdown characters, we try to send it as MarkdownV2.
-            // Note: This is a simplistic check. A more robust way would be to always 
-            // ensure the input is valid MarkdownV2 or escape it properly.
-            await this.bot.api.sendMessage(chatId, text, {
-                parse_mode: 'MarkdownV2',
+            await this.bot.api.sendMessage(chatId, htmlText, {
+                parse_mode: 'HTML',
             });
-            logger.info({ jid, length: text.length }, 'Telegram message sent (MarkdownV2)');
+            logger.info({ jid, length: text.length }, 'Telegram message sent (HTML)');
         } catch (err) {
-            logger.warn({ jid, err }, 'Failed to send as MarkdownV2, falling back to plain text');
+            logger.warn({ jid, err }, 'Failed to send as HTML, falling back to plain text');
             try {
-                // Fallback to plain text if markdown parsing fails
                 await this.bot.api.sendMessage(chatId, text);
                 logger.info({ jid, length: text.length }, 'Telegram message sent (Plain Text fallback)');
             } catch (err2) {
