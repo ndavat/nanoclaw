@@ -85,6 +85,14 @@ export class TelegramChannel implements Channel {
                 res.writeHead(200);
                 res.end('NanoClaw Telegram Bot is running');
                 return;
+            } else if (req.method === 'GET' && req.url === '/health') {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    status: 'ok',
+                    uptime: process.uptime(),
+                    timestamp: new Date().toISOString(),
+                }));
+                return;
             }
             res.writeHead(404);
             res.end();

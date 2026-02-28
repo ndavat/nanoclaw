@@ -3,8 +3,10 @@ services:
     name: nanoclaw-telegram
     runtime: node
     plan: free
+    region: oregon
     buildCommand: npm install && npm run build
     startCommand: npm run start
+    healthCheckPath: /health
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
@@ -14,5 +16,7 @@ services:
         value: moonshotai/kimi-k2.5
       - key: ASSISTANT_NAME
         value: Andy
-      - key: ASISTANT_HAS_OWN_NUMBER
+      - key: ASSISTANT_HAS_OWN_NUMBER
         value: "true"
+      - key: NODE_VERSION
+        value: "22"

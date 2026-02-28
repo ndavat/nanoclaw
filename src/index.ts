@@ -394,6 +394,26 @@ function recoverPendingMessages(): void {
 // No container system to ensure on Render free tier
 function ensureContainerSystemRunning(): void { }
 
+// Keep-alive: ping own /health endpoint to prevent Render free tier spin-down
+function startKeepAlive(): void {
+  const externalUrl = process.env.RENDER_EXTERNAL_URL;
+  if (!externalUrl) return;
+
+  const healthUrl = `${externalUrl.replace(/\/$/, '')}/health`;
+  const KEEP_ALIVE_INTERVAL = 10 * 60 * 1000; // 10 minutes
+
+  setInterval(async () => {
+    try {
+      await fetch(healthUrl);
+      logger.debug('Keep-alive ping sent');
+    } catch (err) {
+      logger.warn({ err }, 'Keep-alive ping failed');
+    }
+  }, KEEP_ALIVE_INTERVAL);
+
+  logger.info({ healthUrl }, 'Keep-alive started (10min interval)');
+}
+
 async function main(): Promise<void> {
   ensureContainerSystemRunning();
   initDatabase();
@@ -427,6 +447,7 @@ async function main(): Promise<void> {
   telegram = new TelegramChannel(channelOpts);
   channels.push(telegram);
   await telegram.connect();
+  startKeepAlive();
 
   // Start subsystems (independently of connection handler)
   startSchedulerLoop({
