@@ -185,37 +185,44 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
   let hadError = false;
   let outputSentToUser = false;
 
-  const output = await runAgent(group, prompt, chatJid, async (result) => {
-    // Streaming output callback — called for each agent result
-    if (result.result) {
-      const raw =
-        typeof result.result === 'string'
-          ? result.result
-          : JSON.stringify(result.result);
-      // Strip <internal>...</internal> blocks — agent uses these for internal reasoning
-      const text = raw.replace(/<internal>[\s\S]*?<\/internal>/g, '').trim();
-      logger.info({ group: group.name }, `Agent output: ${raw.slice(0, 200)}`);
-      if (text) {
-        await channel.sendMessage(chatJid, text);
-        outputSentToUser = true;
-      }
-      // Only reset idle timer on actual results, not session-update markers (result: null)
-      resetIdleTimer();
-    }
+  let streamedText = '';
+  let lastSentLength = 0;
 
-    if (result.status === 'success') {
+  const result = await runAgent(group, prompt, chatJid, async (update) => {
+    if (update.result) {
+      streamedText += update.result;
+
+      // Periodically send chunks if we have a significant amount of new text
+      // but only if it ends in a newline or sentence boundary to avoid breaking markdown
+      const newContent = streamedText.slice(lastSentLength);
+      if (newContent.length > 500 && (newContent.includes('\n') || newContent.includes('. '))) {
+        const textToSend = formatOutbound(streamedText.slice(lastSentLength));
+        if (textToSend) {
+          await channel.sendMessage(chatJid, textToSend);
+          outputSentToUser = true;
+          lastSentLength = streamedText.length;
+        }
+      }
+    }
+    if (update.status === 'success') {
       queue.notifyIdle(chatJid);
     }
-
-    if (result.status === 'error') {
+    if (update.status === 'error') {
       hadError = true;
     }
   });
 
+  // Send any remaining text
+  const remainingText = formatOutbound(streamedText.slice(lastSentLength));
+  if (remainingText) {
+    await channel.sendMessage(chatJid, remainingText);
+    outputSentToUser = true;
+  }
+
   await channel.setTyping?.(chatJid, false);
   if (idleTimer) clearTimeout(idleTimer);
 
-  if (output === 'error' || hadError) {
+  if (result === 'error' || hadError) {
     // If we already sent output to the user, don't roll back the cursor —
     // the user got their response and re-processing would send duplicates.
     if (outputSentToUser) {

@@ -29,7 +29,7 @@ export const LLM_MODEL =
   process.env.LLM_MODEL || envConfig.LLM_MODEL || 'moonshotai/kimi-k2.5';
 export const PORT = parseInt(process.env.PORT || envConfig.PORT || '3000', 10);
 export const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
-export const POLL_INTERVAL = 2000;
+export const POLL_INTERVAL = 500;
 export const SCHEDULER_POLL_INTERVAL = 60000;
 
 // Absolute paths needed for container mounts

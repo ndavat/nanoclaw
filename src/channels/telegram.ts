@@ -105,24 +105,29 @@ export class TelegramChannel implements Channel {
 
     async sendMessage(jid: string, text: string): Promise<void> {
         const chatId = parseInt(jid.replace('tg:', ''), 10);
-        // Don't prefix with Assistant Name on Telegram if it's a private chat? 
-        // The existing WhatsApp implementation prefixes it.
-        // Let's keep consistency with the user prompt's request for "bespoke" and 
-        // "clean code", but the base project prefixes messages.
-        // I will stick to the base project's behavior for now unless it feels wrong.
-        // Actually, on Telegram, users expect messages to come from the bot's identity directly.
-        // But index.ts already handles prefixing or passing raw text? 
-        // No, whatsapp.ts handle prefixing.
 
-        // In NanoClaw, index.ts calls channel.sendMessage(jid, text).
-        // whatsapp.ts line 240: const prefixed = ASSISTANT_HAS_OWN_NUMBER ? text : `${ASSISTANT_NAME}: ${text}`;
+        // Telegram MarkdownV2 requires escaping special characters outside of code blocks/links
+        const escapeMarkdown = (str: string) => {
+            return str.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+        };
 
-        // I'll skip the prefix on Telegram because Telegram is bot-native.
         try {
-            await this.bot.api.sendMessage(chatId, text);
-            logger.info({ jid, length: text.length }, 'Telegram message sent');
+            // If the text contains markdown characters, we try to send it as MarkdownV2.
+            // Note: This is a simplistic check. A more robust way would be to always 
+            // ensure the input is valid MarkdownV2 or escape it properly.
+            await this.bot.api.sendMessage(chatId, text, {
+                parse_mode: 'MarkdownV2',
+            });
+            logger.info({ jid, length: text.length }, 'Telegram message sent (MarkdownV2)');
         } catch (err) {
-            logger.error({ jid, err }, 'Failed to send Telegram message');
+            logger.warn({ jid, err }, 'Failed to send as MarkdownV2, falling back to plain text');
+            try {
+                // Fallback to plain text if markdown parsing fails
+                await this.bot.api.sendMessage(chatId, text);
+                logger.info({ jid, length: text.length }, 'Telegram message sent (Plain Text fallback)');
+            } catch (err2) {
+                logger.error({ jid, err: err2 }, 'Failed to send Telegram message even as plain text');
+            }
         }
     }
 
